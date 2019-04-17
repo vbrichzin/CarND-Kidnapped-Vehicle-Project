@@ -29,7 +29,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  num_particles = 12;  // TODO: Set the number of particles
+  num_particles = 20;  // TODO: Set the number of particles
 
   // Assigning std deviations for the later Gaussian noise add operation
   double std_x, std_y, std_theta;
