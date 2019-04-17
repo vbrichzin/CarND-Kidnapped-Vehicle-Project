@@ -81,6 +81,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    std_y = std_pos[1];
    std_theta = std_pos[2];
 
+   // Random engine for picking random values from distribution
+   default_random_engine gen;
+
    for (int i = 0; i < num_particles; i++)
    {
        // Assign current particle location values
@@ -93,13 +96,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
        double p_pred_x, p_pred_y, p_pred_theta;
 
        // Predict particle position and orientation
-       if (fabs(yaw_rate) < 0.001) // Distinguish for very small yaw_rate to avoid division by zero
-       {
-           p_pred_x = p_current_x + (velocity * delta_t * cos(p_current_theta));
-           p_pred_y = p_current_y + (velocity * delta_t * sin(p_current_theta));
-           p_pred_theta = p_current_theta;
-       }
-       else
+       if (fabs(yaw_rate) > 0.001) // Distinguish for very small yaw_rate to avoid division by zero
        {
            p_pred_x = p_current_x + (velocity / yaw_rate) * \
            (sin(p_current_theta + yaw_rate * delta_t) - sin(p_current_theta));
@@ -107,14 +104,17 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
            (cos(p_current_theta) - cos(p_current_theta + yaw_rate * delta_t));
            p_pred_theta = p_current_theta + (yaw_rate * delta_t);
        }
+       else
+       {
+           p_pred_x = p_current_x + (velocity * delta_t * cos(p_current_theta));
+           p_pred_y = p_current_y + (velocity * delta_t * sin(p_current_theta));
+           p_pred_theta = p_current_theta;
+       }
 
        // Creating Gaussian distribution for x, y and theta with acc. std deviation for adding noise
        normal_distribution<double> dist_x(p_pred_x, std_x);
        normal_distribution<double> dist_y(p_pred_y, std_y);
        normal_distribution<double> dist_theta(p_pred_theta, std_theta);
-
-       // Random engine for picking random values from distribution
-       default_random_engine gen;
 
        // Assign predicted location and orientation back to particle
        particles[i].x = dist_x(gen);
@@ -214,16 +214,16 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       // Create vector for transformed observations from car coordinates into map coordinates
       vector<LandmarkObs> obs_transf;
       // Iterate over all observations
-      for (unsigned int j = 0; j < observations.size(); j++)
+      for (unsigned int k = 0; k < observations.size(); k++)
       {
           double obs_map_x, obs_map_y;
           // Transform observations in car coordinates to map coordinates
-          obs_map_x = p_x + (cos(p_theta) * observations[j].x) - \
-          (sin(p_theta) * observations[j].y);
-          obs_map_y = p_y + (sin(p_theta) * observations[j].x) + \
-          (cos(p_theta) * observations[j].y);
+          obs_map_x = p_x + (cos(p_theta) * observations[k].x) - \
+          (sin(p_theta) * observations[k].y);
+          obs_map_y = p_y + (sin(p_theta) * observations[k].x) + \
+          (cos(p_theta) * observations[k].y);
 
-          obs_transf.push_back(LandmarkObs{observations[j].id, obs_map_x, obs_map_y});
+          obs_transf.push_back(LandmarkObs{observations[k].id, obs_map_x, obs_map_y});
       }
 
       // Call helper function dataAssociation
@@ -233,24 +233,24 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       particles[i].weight = 1.0;
 
       // Iterate over all transformed observations in sensor range
-      for (unsigned int j = 0; j < obs_transf.size(); j++)
+      for (unsigned int l = 0; l < obs_transf.size(); l++)
       {
           double obs_map_x, obs_map_y;
           double mean_landmark_x, mean_landmark_y;
           double std_landmark_x, std_landmark_y;
 
           // Assign transformed observations
-          obs_map_x = obs_transf[j].x;
-          obs_map_y = obs_transf[j].y;
+          obs_map_x = obs_transf[l].x;
+          obs_map_y = obs_transf[l].y;
 
           // Iterate over all landmarks in sensor range
-          for (unsigned int k = 0; k < LandmarkObs_InSensorRange.size(); k++)
+          for (unsigned int m = 0; m < LandmarkObs_InSensorRange.size(); m++)
           {
               // Identify map landmarks that correspond to transformed observed ones
-              if (obs_transf[j].id == LandmarkObs_InSensorRange[k].id)
+              if (obs_transf[l].id == LandmarkObs_InSensorRange[m].id)
               {
-                  mean_landmark_x = LandmarkObs_InSensorRange[k].x;
-                  mean_landmark_y = LandmarkObs_InSensorRange[k].y;
+                  mean_landmark_x = LandmarkObs_InSensorRange[m].x;
+                  mean_landmark_y = LandmarkObs_InSensorRange[m].y;
                   break;
               }
           }
@@ -302,7 +302,7 @@ void ParticleFilter::resample() {
   double temp = 0.0;
 
   // Start re-sampling
-  for (int i = 0; i < num_particles; i++)
+  for (int j = 0; j < num_particles; j++)
   {
       temp += uniform_weight_dist(gen) * 2.0;
       while (temp > current_weights[index])
